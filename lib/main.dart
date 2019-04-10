@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tuple/tuple.dart';
-import 'model/beer.dart';
+import 'package:goedale_test/model/beer.dart';
 
-import 'service/beersearch/beersearchservice.dart';
+import 'package:goedale_test/service/beersearch/beersearchservice.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -72,10 +72,7 @@ class MyHomePage extends StatelessWidget {
                 },
               ),
             ),
-            Expanded(
-                child: UntappdListView(
-              searchString: "vrouwen",
-            ))
+            Expanded(child: UntappdListView())
           ],
         ));
   }
@@ -89,59 +86,80 @@ class BeerDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(appBar: AppBar(title: Text(_beer.name)));
-
   }
 }
 
-class UntappdListView extends StatelessWidget {
-  UntappdListView({this.searchString});
+class UntappdListView extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return _UntappdListViewState();
+  }
+}
 
-  final String searchString;
+class _UntappdListViewState extends State<UntappdListView> {
+  Future<List<Beer>> _beerList;
 
-  Future<List<Beer>> _getBeers() async {
+
+  Future<List<Beer>> _getBeersByString(String searchString) {
     return UntappdService().findBeersMatching(searchString);
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _getBeers(),
+      future: _beerList,
       builder: (BuildContext context, AsyncSnapshot snapshot) {
         if (snapshot.data == null) {
-          return Container(
-            child: Center(
-              child: Text("Loading"),
-            ),
-          );
+          return Column(children: <Widget>[
+            Flexible(
+              child: TextFormField(
+                decoration:
+                    const InputDecoration(hintText: "Zoek naar een bier.."),
+
+                onFieldSubmitted: (String item) {
+                  this.setState(() {
+                    _beerList = _getBeersByString(item);
+                  });
+                },
+              ),
+            )
+          ]);
         } else {
           return Column(children: <Widget>[
             Flexible(
-              child: Text("he"),
+              child: TextFormField(
+                initialValue: "zoeken",
+                //        controller: myController,
+                onFieldSubmitted: (String item) {
+                  this.setState(() {
+                    _beerList = _getBeersByString(item);
+                  });
+                },
+              ),
             ),
             Expanded(
-            child:  ListView.builder(
-                itemCount: snapshot.data.length,
-                itemBuilder: (BuildContext context, int index) {
-                  // stateless widget maken
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage:
-                      NetworkImage(snapshot.data[index].label.iconUrl),
-                    ),
-                    title: Text(snapshot.data[index].name),
-                    subtitle: Text(snapshot.data[index].style.name),
-                    onTap: () {
-                      Navigator.push(
-                          context,
-                          new MaterialPageRoute(
-                              builder: (context) =>
-                                  BeerDetailPage(snapshot.data[index])));
-                    },
-                  );
-                }),
+              child: ListView.builder(
+                  itemCount: snapshot.data.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    // stateless widget maken
+                    return ListTile(
+                      isThreeLine: true,
+                      leading: CircleAvatar(
+                        backgroundImage:
+                            NetworkImage(snapshot.data[index].label.iconUrl),
+                      ),
+                      title: Text(snapshot.data[index].name),
+                      subtitle: Text(snapshot.data[index].style.name + " " + snapshot.data[index].abv.toString() + "%"),
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            new MaterialPageRoute(
+                                builder: (context) =>
+                                    BeerDetailPage(snapshot.data[index])));
+                      },
+                    );
+                  }),
             ),
-
-
           ]);
         }
       },
@@ -286,7 +304,7 @@ class UntappdService implements BeerSearchService {
 
     final serviceUri = _buildUntappdServiceURI(
         path: "search/beer",
-        queryParameters: {'q': pattern, 'limit': '50'},
+        queryParameters: {'q': pattern, 'limit': '5'},
         retryCount: retryCount);
 
     HttpClientRequest request = await httpClient.getUrl(serviceUri.item1);

@@ -7,6 +7,7 @@ class Beer {
   final BeerLabel label;
   final double abv;
   final BeerStyle style;
+  final double rating;
 // add rating to model
   Beer({
     @required this.id,
@@ -15,6 +16,7 @@ class Beer {
     this.abv,
     this.label,
     this.style,
+    this.rating,
   });
 
   @override
@@ -27,7 +29,8 @@ class Beer {
               description == other.description &&
               label == other.label &&
               abv == other.abv &&
-              style == other.style;
+              style == other.style &&
+              rating == other.rating;
 
   @override
   int get hashCode =>
@@ -36,7 +39,8 @@ class Beer {
       description.hashCode ^
       label.hashCode ^
       abv.hashCode ^
-      style.hashCode;
+      style.hashCode^
+      rating.hashCode;
 }
 
 class BeerStyle {
