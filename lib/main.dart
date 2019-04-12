@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tuple/tuple.dart';
-import 'package:goedale_test/model/beer.dart';
+import 'package:goedale_test/model/beersearch.dart';
 
 import 'package:goedale_test/service/beersearch/beersearchservice.dart';
 import 'dart:async';
@@ -35,9 +35,7 @@ class MyHomePage extends StatelessWidget {
             ),
             ListTile(
               title: Text("niets"),
-              onTap: () {
-                //   print( UntappdService().findBeersMatching("paradox"));
-              },
+              onTap: () {},
             ),
           ],
         )),
@@ -85,7 +83,50 @@ class BeerDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: Text(_beer.name)));
+    return Scaffold(
+      appBar: AppBar(title: Text(_beer.name)),
+      body: Row(
+        children: <Widget>[
+          Expanded(
+            child: FutureBuilder(builder: (BuildContext context,AsyncSnapshot snapshot){
+              if (snapshot.data == null){
+                return RichText(
+                  text: TextSpan(
+                    text: 'Hello ',
+                    style: DefaultTextStyle.of(context).style,
+                    children: <TextSpan>[
+                      TextSpan(text: 'bold', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: ' world!'),
+                    ],
+                  ),
+                );
+              }
+              else{
+                return Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          text: 'Hello ',
+                          style: DefaultTextStyle.of(context).style,
+                          children: <TextSpan>[
+                            TextSpan(text: 'bold', style: TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: ' world!'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+
+                    )
+                  ],
+                );
+              }
+            }),
+          )
+        ],
+      ),
+    );
   }
 }
 
@@ -97,17 +138,16 @@ class UntappdListView extends StatefulWidget {
 }
 
 class _UntappdListViewState extends State<UntappdListView> {
-  Future<List<Beer>> _beerList;
+  Future<List<Items>> _beerSearchItemsList;
 
-
-  Future<List<Beer>> _getBeersByString(String searchString) {
+  Future<List<Items>> _getBeerSearchItemsByString(String searchString) {
     return UntappdService().findBeersMatching(searchString);
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _beerList,
+      future: _beerSearchItemsList,
       builder: (BuildContext context, AsyncSnapshot snapshot) {
         if (snapshot.data == null) {
           return Column(children: <Widget>[
@@ -115,10 +155,9 @@ class _UntappdListViewState extends State<UntappdListView> {
               child: TextFormField(
                 decoration:
                     const InputDecoration(hintText: "Zoek naar een bier.."),
-
                 onFieldSubmitted: (String item) {
                   this.setState(() {
-                    _beerList = _getBeersByString(item);
+                    _beerSearchItemsList = _getBeerSearchItemsByString(item);
                   });
                 },
               ),
@@ -132,7 +171,7 @@ class _UntappdListViewState extends State<UntappdListView> {
                 //        controller: myController,
                 onFieldSubmitted: (String item) {
                   this.setState(() {
-                    _beerList = _getBeersByString(item);
+                    _beerSearchItemsList = _getBeerSearchItemsByString(item);
                   });
                 },
               ),
@@ -145,17 +184,21 @@ class _UntappdListViewState extends State<UntappdListView> {
                     return ListTile(
                       isThreeLine: true,
                       leading: CircleAvatar(
-                        backgroundImage:
-                            NetworkImage(snapshot.data[index].label.iconUrl),
+                        backgroundImage: NetworkImage(
+                            snapshot.data[index].beer.label.iconUrl),
                       ),
-                      title: Text(snapshot.data[index].name),
-                      subtitle: Text(snapshot.data[index].style.name + " " + snapshot.data[index].abv.toString() + "%"),
+                      title: Text(snapshot.data[index].beer.name),
+                      subtitle: Text(snapshot.data[index].beer.style.name +
+                          " - " +
+                          snapshot.data[index].beer.abv.toString() +
+                          "% - " +
+                          snapshot.data[index].brewery.name),
                       onTap: () {
                         Navigator.push(
                             context,
                             new MaterialPageRoute(
                                 builder: (context) =>
-                                    BeerDetailPage(snapshot.data[index])));
+                                    BeerDetailPage(snapshot.data[index].beer)));
                       },
                     );
                   }),
@@ -289,14 +332,15 @@ class UntappdService implements BeerSearchService {
         "3F67FBB565C90403B951D4F0CD13D1A6FD7ED3E9");
   }
 
+
+
   @override
-  Future<List<Beer>> findBeersMatching(String pattern) async {
+  Future<List<Items>> findBeersMatching(String pattern) async {
     HttpClient client = new HttpClient();
-    //print(_callApi(client, pattern, 1));
-    return _callApi(client, pattern, 1);
+    return _callApiBeerItems(client, pattern, 1);
   }
 
-  Future<List<Beer>> _callApi(
+  Future<List<Items>> _callApiBeerItems(
       HttpClient httpClient, String pattern, int retryCount) async {
     if (pattern == null || pattern.trim().isEmpty) {
       return List(0);
@@ -314,7 +358,7 @@ class UntappdService implements BeerSearchService {
         //  BeerMeUpApp.sentry.capture(event: Event(message: "Invalid provider id: ${serviceUri.item2}"));
         _keysExcludedIds.add(serviceUri.item2);
 
-        return _callApi(httpClient, pattern, retryCount + 1);
+        return _callApiBeerItems(httpClient, pattern, retryCount + 1);
       }
 
       throw Exception(
@@ -331,8 +375,9 @@ class UntappdService implements BeerSearchService {
 
     return (responseJson['beers']['items'] as List).map((beerJsonObject) {
       final Map<String, dynamic> beerJson = beerJsonObject["beer"];
-      BeerStyle style;
+      final Map<String, dynamic> breweryJson = beerJsonObject["brewery"];
 
+      BeerStyle style;
       final String styleName = beerJson["beer_style"];
       if (styleName != null) {
         style = BeerStyle(
@@ -357,14 +402,19 @@ class UntappdService implements BeerSearchService {
         );
       }
 
-      return Beer(
-        id: (beerJson["bid"] as int).toString(),
-        name: beerJson["beer_name"],
-        description: beerJson["beer_description"],
-        abv: abv,
-        label: label,
-        style: style,
-      );
+      return Items(
+          beer: Beer(
+            id: (beerJson["bid"] as int).toString(),
+            name: beerJson["beer_name"],
+            description: beerJson["beer_description"],
+            abv: abv,
+            label: label,
+            style: style,
+          ),
+          brewery: Brewery(
+            id: breweryJson["brewery_id"].toString(),
+            name: breweryJson["brewery_name"],
+          ));
     }).toList(growable: false);
   }
 }

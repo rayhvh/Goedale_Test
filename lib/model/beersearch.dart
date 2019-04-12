@@ -1,5 +1,22 @@
 import 'package:meta/meta.dart';
 
+class BeerSearch {
+  final Items items;
+  BeerSearch({this.items});
+}
+
+class Items {
+  final Beer beer;
+  final Brewery brewery;
+  Items({this.beer, this.brewery});
+}
+
+class Brewery {
+  final String id;
+  final String name;
+  Brewery({this.id, this.name});
+}
+
 class Beer {
   final String id;
   final String name;
@@ -8,7 +25,9 @@ class Beer {
   final double abv;
   final BeerStyle style;
   final double rating;
-// add rating to model
+  final String brewery;
+  final List<BeerPhoto> beerPhotos;
+
   Beer({
     @required this.id,
     @required this.name,
@@ -17,8 +36,10 @@ class Beer {
     this.label,
     this.style,
     this.rating,
+    this.brewery,
+    this.beerPhotos,
   });
-
+/*
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -40,7 +61,12 @@ class Beer {
       label.hashCode ^
       abv.hashCode ^
       style.hashCode^
-      rating.hashCode;
+      rating.hashCode;*/
+}
+
+class BeerPhoto{
+  final String photo_md;
+  BeerPhoto({this.photo_md});
 }
 
 class BeerStyle {
@@ -52,7 +78,7 @@ class BeerStyle {
     @required this.name,
   });
 
-  @override
+  /*@override
   bool operator ==(Object other) =>
       identical(this, other) ||
           other is BeerStyle &&
@@ -63,9 +89,8 @@ class BeerStyle {
   @override
   int get hashCode =>
       id.hashCode ^
-      name.hashCode;
+      name.hashCode;*/
 }
-
 
 class BeerLabel {
   final String iconUrl;
@@ -78,7 +103,7 @@ class BeerLabel {
     this.largeUrl,
   });
 
-  @override
+  /* @override
   bool operator ==(Object other) =>
       identical(this, other) ||
           other is BeerLabel &&
@@ -91,5 +116,5 @@ class BeerLabel {
   int get hashCode =>
       iconUrl.hashCode ^
       mediumUrl.hashCode ^
-      largeUrl.hashCode;
+      largeUrl.hashCode;*/
 }
