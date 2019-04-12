@@ -88,37 +88,56 @@ class BeerDetailPage extends StatelessWidget {
       body: Row(
         children: <Widget>[
           Expanded(
-            child: FutureBuilder(builder: (BuildContext context,AsyncSnapshot snapshot){
-              if (snapshot.data == null){
-                return RichText(
-                  text: TextSpan(
-                    text: 'Hello ',
-                    style: DefaultTextStyle.of(context).style,
-                    children: <TextSpan>[
-                      TextSpan(text: 'bold', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: ' world!'),
+            child: FutureBuilder(
+                builder: (BuildContext context, AsyncSnapshot snapshot) {
+              if (snapshot.data == null) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                children: <Widget>[
+                                  Text(_beer.name),
+                                  //  Text(_beer.brewery), // Get this from new search /w rating
+                                  Text(_beer.style.name),
+                                  Text(_beer.abv.toString()),
+                                  Text("rating"),
+                                  Text(_beer.description),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          Column(
+
+                            children: <Widget>[
+                              CircleAvatar(
+                                radius: 70.0,
+                                backgroundImage:
+                                    NetworkImage(_beer.label.iconUrl), // sm groot maken door new search.
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
+                      Column(
+                        children: <Widget>[
+                          Text("foto's"),
+                          Text("Smaak labels"),
+                        ],
+                      ),
                     ],
                   ),
                 );
-              }
-              else{
+              } else {
                 return Row(
                   children: <Widget>[
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'Hello ',
-                          style: DefaultTextStyle.of(context).style,
-                          children: <TextSpan>[
-                            TextSpan(text: 'bold', style: TextStyle(fontWeight: FontWeight.bold)),
-                            TextSpan(text: ' world!'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Expanded(
-
-                    )
+                    Column(),
                   ],
                 );
               }
@@ -331,8 +350,6 @@ class UntappdService implements BeerSearchService {
     return Tuple2(Uri.https(_UNTAPPD_DB_API_ENDPOINT, "/v4/$path", queryParams),
         "3F67FBB565C90403B951D4F0CD13D1A6FD7ED3E9");
   }
-
-
 
   @override
   Future<List<Items>> findBeersMatching(String pattern) async {
