@@ -1,14 +1,14 @@
 import 'package:meta/meta.dart';
 
 class BeerSearch {
-  final Items items;
+  final Item items;
   BeerSearch({this.items});
 }
 
-class Items {
+class Item {
   final Beer beer;
   final Brewery brewery;
-  Items({this.beer, this.brewery});
+  Item({this.beer, this.brewery});
 }
 
 class Brewery {

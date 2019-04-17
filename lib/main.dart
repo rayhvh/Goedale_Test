@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tuple/tuple.dart';
-import 'package:goedale_test/model/beersearch.dart';
+import 'package:goedale_test/model/itemAndBeerClasses.dart';
+import 'package:goedale_test/model/beerlisting.dart';
 
 import 'package:goedale_test/service/beersearch/beersearchservice.dart';
 import 'dart:async';
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
+      title: 'Goedale',
       theme: ThemeData.dark(),
       home: MyHomePage(),
     );
@@ -40,7 +41,7 @@ class MyHomePage extends StatelessWidget {
           ],
         )),
         appBar: AppBar(
-          title: Text('Cloud FireStore Example'),
+          title: Text('Goedale aanbod'),
           centerTitle: true,
           actions: <Widget>[
             IconButton(
@@ -50,7 +51,6 @@ class MyHomePage extends StatelessWidget {
                     .runTransaction((Transaction transaction) async {
                   CollectionReference reference =
                       Firestore.instance.collection('beers');
-
                   await reference
                       .add({"title": "", "editing": false, "amount": 0});
                 });
@@ -60,26 +60,48 @@ class MyHomePage extends StatelessWidget {
         ),
         body: Row(
           children: <Widget>[
-            Expanded(
-              child: StreamBuilder(
-                stream: Firestore.instance.collection('beers').snapshots(),
-                builder: (BuildContext context,
-                    AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (!snapshot.hasData) return CircularProgressIndicator();
-                  return FirestoreListView(documents: snapshot.data.documents);
-                },
-              ),
-            ),
-            Expanded(child: UntappdListView())
+            Expanded(child: Column(
+              children: <Widget>[
+                Container(child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text("Vooraad", style: Theme.of(context).textTheme.title,),
+                ),),
+                Expanded(
+                  child: StreamBuilder(
+                    stream: Firestore.instance
+                        .collection('bokaalStock')
+                        .snapshots(), // change to dynamic db?
+                    builder: (BuildContext context,
+                        AsyncSnapshot<QuerySnapshot> snapshot) {
+                      if (!snapshot.hasData) return CircularProgressIndicator();
+                      return FirestoreListViewBeerStock(
+                          documents: snapshot.data.documents);
+                    },
+                  ),
+                ),
+              ],
+            ),),
+            Expanded(child: Column(
+              children: <Widget>[
+                Container(child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text("Toevoegen nieuw bier", style: Theme.of(context).textTheme.title),
+                ),),
+                Expanded(child: UntappdListView()),
+              ],
+            ),)
+
           ],
         ));
   }
 }
 
-class BeerDetailPage extends StatelessWidget {
+class UntappdBeerDetailPage extends StatelessWidget {
   final Beer _beer;
 
-  BeerDetailPage(this._beer);
+  UntappdBeerDetailPage(this._beer);
+  TextEditingController amountController = new TextEditingController();
+  TextEditingController priceController = new TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -102,34 +124,73 @@ class BeerDetailPage extends StatelessWidget {
                               padding: const EdgeInsets.all(8.0),
                               child: Column(
                                 children: <Widget>[
-                                  Text(_beer.name),
-                                  //  Text(_beer.brewery), // Get this from new search /w rating
+                                  Text(_beer.name, style: Theme.of(context).textTheme.title),
+                                    Text("Brouwerij"), // Get this from new search /w rating
                                   Text(_beer.style.name),
-                                  Text(_beer.abv.toString()),
-                                  Text("rating"),
-                                  Text(_beer.description),
+                                  Text(_beer.abv.toString()+"%"),
+                                  Text("Rating: 3.14"),
                                 ],
                               ),
                             ),
                           ),
-
-                          Column(
-
-                            children: <Widget>[
-                              CircleAvatar(
-                                radius: 70.0,
-                                backgroundImage:
-                                    NetworkImage(_beer.label.iconUrl), // sm groot maken door new search.
-                              ),
-                            ],
+                          Expanded(
+                            child: Column(
+                              children: <Widget>[
+                                CircleAvatar(
+                                  radius: 70.0,
+                                  backgroundImage: NetworkImage(_beer.label
+                                      .iconUrl), // sm groot maken door new search.
+                                ),
+                                TextFormField(
+                                  controller: amountController,
+                                  decoration: const InputDecoration(
+                                      hintText: "Hoeveelheid"),
+                                ),
+                                TextFormField(
+                                  controller: priceController,
+                                  decoration:
+                                      const InputDecoration(hintText: "Prijs"),
+                                ),
+                                RaisedButton(
+                                    onPressed: () {
+                                      Firestore.instance.runTransaction(
+                                          (Transaction transaction) async {
+                                        CollectionReference reference =
+                                            Firestore.instance
+                                                .collection("bokaalStock");
+                                        await reference.add({
+                                          "name": _beer.name,
+                                          "abv": _beer.abv,
+                                          "brewery": "brewery name",
+                                          "desc": _beer.description,
+                                          "id": _beer.id,
+                                          "rating": 3.14,
+                                          "style": _beer.style.name,
+                                          "label": {
+                                            "iconUrl": _beer.label.iconUrl,
+                                            "mediumUrl": _beer.label.iconUrl,
+                                            "largeUrl": _beer.label.iconUrl
+                                          },
+                                          "price": int.parse(priceController.text),
+                                          "amount": int.parse(amountController.text),
+                                        });
+                                      });
+                                    Navigator.pop(context);
+                                      },
+                                    child: const Text('Toevoegen')),
+                              ],
+                            ),
                           )
                         ],
                       ),
-                      Column(
-                        children: <Widget>[
-                          Text("foto's"),
-                          Text("Smaak labels"),
-                        ],
+                      Expanded(
+                        child: Column(
+                          children: <Widget>[
+                            Text(_beer.description),
+                            Text("Foto's"),
+                            Text("Smaak labels"),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -157,9 +218,9 @@ class UntappdListView extends StatefulWidget {
 }
 
 class _UntappdListViewState extends State<UntappdListView> {
-  Future<List<Items>> _beerSearchItemsList;
+  Future<List<Item>> _beerSearchItemsList;
 
-  Future<List<Items>> _getBeerSearchItemsByString(String searchString) {
+  Future<List<Item>> _getBeerSearchItemsByString(String searchString) {
     return UntappdService().findBeersMatching(searchString);
   }
 
@@ -184,9 +245,9 @@ class _UntappdListViewState extends State<UntappdListView> {
           ]);
         } else {
           return Column(children: <Widget>[
-            Flexible(
+            Container(
               child: TextFormField(
-                initialValue: "zoeken",
+                initialValue: "",
                 //        controller: myController,
                 onFieldSubmitted: (String item) {
                   this.setState(() {
@@ -196,6 +257,7 @@ class _UntappdListViewState extends State<UntappdListView> {
               ),
             ),
             Expanded(
+
               child: ListView.builder(
                   itemCount: snapshot.data.length,
                   itemBuilder: (BuildContext context, int index) {
@@ -216,8 +278,8 @@ class _UntappdListViewState extends State<UntappdListView> {
                         Navigator.push(
                             context,
                             new MaterialPageRoute(
-                                builder: (context) =>
-                                    BeerDetailPage(snapshot.data[index].beer)));
+                                builder: (context) => UntappdBeerDetailPage(
+                                    snapshot.data[index].beer)));
                       },
                     );
                   }),
@@ -229,87 +291,68 @@ class _UntappdListViewState extends State<UntappdListView> {
   }
 }
 
-class FirestoreListView extends StatelessWidget {
+class FirestoreListViewBeerStock extends StatelessWidget {
   final List<DocumentSnapshot> documents;
 
-  FirestoreListView({this.documents});
+  FirestoreListViewBeerStock({this.documents});
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
+
       itemCount: documents.length,
-      itemExtent: 110.0,
       itemBuilder: (BuildContext context, int index) {
-        String title = documents[index].data['title'].toString();
-        int amount = documents[index].data['amount'];
+        var _listing = BeerListing(
+          beer: Beer(
+            id: documents[index].data['id'].toString(),
+            name: documents[index].data['name'].toString(),
+            brewery: documents[index].data['brewery'].toString(),
+            label: BeerLabel(
+                iconUrl: documents[index].data['label']['iconUrl'].toString()),
+            style: BeerStyle(
+                id: null, name: documents[index].data['style'].toString()),
+            abv: documents[index].data['abv'],
+            rating: documents[index].data['rating'],
+          ),
+          price: documents[index].data['price'],
+          stockAmount: documents[index].data['amount'],
+        );
+
         return ListTile(
             title: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(5.0),
-                border: Border.all(color: Colors.white),
-              ),
               padding: EdgeInsets.all(5.0),
               child: Row(
                 children: <Widget>[
-                  Expanded(
-                    child: !documents[index].data['editing']
-                        ? Text(title)
-                        : TextFormField(
-                            initialValue: title,
-                            onFieldSubmitted: (String item) {
-                              Firestore.instance
-                                  .runTransaction((transaction) async {
-                                DocumentSnapshot snapshot = await transaction
-                                    .get(documents[index].reference);
+                  Flexible(child: ListTile(
 
-                                await transaction.update(
-                                    snapshot.reference, {'title': item});
-
-                                await transaction.update(snapshot.reference,
-                                    {"editing": !snapshot['editing']});
-                              });
-                            },
-                          ),
-                  ),
-                  Text("$amount"),
-                  Column(
-                    children: <Widget>[
-                      IconButton(
-                        onPressed: () {
-                          Firestore.instance
-                              .runTransaction((Transaction transaction) async {
-                            DocumentSnapshot snapshot = await transaction
-                                .get(documents[index].reference);
-                            await transaction.update(snapshot.reference,
-                                {'amount': snapshot['amount'] + 1});
-                          });
-                        },
-                        icon: Icon(Icons.arrow_upward),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Firestore.instance
-                              .runTransaction((Transaction transaction) async {
-                            DocumentSnapshot snapshot = await transaction
-                                .get(documents[index].reference);
-                            await transaction.update(snapshot.reference,
-                                {'amount': snapshot['amount'] - 1});
-                          });
-                        },
-                        icon: Icon(Icons.arrow_downward),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.delete),
-                    onPressed: () {
-                      Firestore.instance.runTransaction((transaction) async {
-                        DocumentSnapshot snapshot =
-                            await transaction.get(documents[index].reference);
-                        await transaction.delete(snapshot.reference);
-                      });
+                    isThreeLine: true,
+                    leading: CircleAvatar(
+                      backgroundImage:
+                      NetworkImage(_listing.beer.label.iconUrl),
+                    ),
+                    title: Text(_listing.beer.name),
+                    subtitle: Text(_listing.beer.brewery +
+                        " - " +
+                        _listing.beer.abv.toString() +
+                        "% - " +
+                        _listing.beer.style.name +
+                        " - Rating "+
+                        _listing.beer.rating.toString()
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          new MaterialPageRoute(
+                              builder: (context) =>
+                                  UntappdBeerDetailPage(_listing.beer))); //change to stockbeerdetail
                     },
-                  )
+                  ),),
+                  Container( child: Column(
+                    children: <Widget>[
+                      Text(_listing.stockAmount.toString() +" x"),
+                      Text("€ " + _listing.price.toString()),
+                    ],
+                  ),)
                 ],
               ),
             ),
@@ -317,7 +360,6 @@ class FirestoreListView extends StatelessWidget {
                     .runTransaction((Transaction transaction) async {
                   DocumentSnapshot snapshot =
                       await transaction.get(documents[index].reference);
-
                   await transaction.update(
                       snapshot.reference, {"editing": !snapshot["editing"]});
                 }));
@@ -352,12 +394,12 @@ class UntappdService implements BeerSearchService {
   }
 
   @override
-  Future<List<Items>> findBeersMatching(String pattern) async {
+  Future<List<Item>> findBeersMatching(String pattern) async {
     HttpClient client = new HttpClient();
     return _callApiBeerItems(client, pattern, 1);
   }
 
-  Future<List<Items>> _callApiBeerItems(
+  Future<List<Item>> _callApiBeerItems(
       HttpClient httpClient, String pattern, int retryCount) async {
     if (pattern == null || pattern.trim().isEmpty) {
       return List(0);
@@ -365,7 +407,7 @@ class UntappdService implements BeerSearchService {
 
     final serviceUri = _buildUntappdServiceURI(
         path: "search/beer",
-        queryParameters: {'q': pattern, 'limit': '5'},
+        queryParameters: {'q': pattern, 'limit': '20'},
         retryCount: retryCount);
 
     HttpClientRequest request = await httpClient.getUrl(serviceUri.item1);
@@ -419,7 +461,7 @@ class UntappdService implements BeerSearchService {
         );
       }
 
-      return Items(
+      return Item(
           beer: Beer(
             id: (beerJson["bid"] as int).toString(),
             name: beerJson["beer_name"],
