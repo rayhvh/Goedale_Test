@@ -32,13 +32,29 @@ class Beer {
     @required this.id,
     @required this.name,
     this.description,
-    this.abv,
     this.label,
+    this.abv,
     this.style,
     this.rating,
     this.brewery,
     this.beerPhotos,
   });
+
+  factory Beer.fromJson(Map<String, dynamic> json){
+    return Beer(
+      id: json['response']['beer']['bid'].toString(),
+      name: json['response']['beer']['beer_name'],
+      description: json['response']['beer']['beer_description'],
+      label: BeerLabel(
+        largeUrl: json['response']['beer']['beer_label_hd']
+      ) ,
+      abv: double.parse(json['response']['beer']['beer_abv'].toString()),
+
+      style: BeerStyle(id: json['response']['beer']['beer_id'], name: json['response']['beer']['beer_style']),
+      rating: json['response']['beer']['rating_score'],
+      brewery: json['response']['beer']['brewery']['brewery_name'],
+    );
+  }
 /*
   @override
   bool operator ==(Object other) =>

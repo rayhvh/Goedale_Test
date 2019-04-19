@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tuple/tuple.dart';
 import 'package:goedale_test/model/itemAndBeerClasses.dart';
 import 'package:goedale_test/model/beerlisting.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:goedale_test/service/beersearch/beersearchservice.dart';
 import 'dart:async';
@@ -96,13 +97,29 @@ class MyHomePage extends StatelessWidget {
   }
 }
 
-class UntappdBeerDetailPage extends StatelessWidget {
-  final Beer _beer;
 
+
+class UntappdBeerDetailPage extends StatefulWidget {
+  final Beer _beer;
   UntappdBeerDetailPage(this._beer);
+  @override
+  State<StatefulWidget> createState() {
+    return _UntappdBeerDetailPageState(_beer);
+  }
+}
+
+class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
+  final Beer _beer;
+  Future<Beer> _untappdBeer;
+
+  _UntappdBeerDetailPageState(this._beer);
   TextEditingController amountController = new TextEditingController();
   TextEditingController priceController = new TextEditingController();
-
+  @override
+  void initState(){
+    super.initState();
+   _untappdBeer = UntappdService().findBeerById(_beer.id);
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -111,8 +128,12 @@ class UntappdBeerDetailPage extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: FutureBuilder(
+              future: _untappdBeer,
                 builder: (BuildContext context, AsyncSnapshot snapshot) {
               if (snapshot.data == null) {
+                return Container(child: CircularProgressIndicator());
+              } else {
+                print(snapshot.data.rating);
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
@@ -125,10 +146,10 @@ class UntappdBeerDetailPage extends StatelessWidget {
                               child: Column(
                                 children: <Widget>[
                                   Text(_beer.name, style: Theme.of(context).textTheme.title),
-                                    Text("Brouwerij"), // Get this from new search /w rating
+                                  Text(snapshot.data.brewery), // via future untappd because we can only have 100 calls a hour. it only gets calls and info of beer at details
                                   Text(_beer.style.name),
                                   Text(_beer.abv.toString()+"%"),
-                                  Text("Rating: 3.14"),
+                                  Text("Rating: " + snapshot.data.rating.toString()),
                                 ],
                               ),
                             ),
@@ -136,11 +157,7 @@ class UntappdBeerDetailPage extends StatelessWidget {
                           Expanded(
                             child: Column(
                               children: <Widget>[
-                                CircleAvatar(
-                                  radius: 70.0,
-                                  backgroundImage: NetworkImage(_beer.label
-                                      .iconUrl), // sm groot maken door new search.
-                                ),
+                                Image.network(snapshot.data.label.largeUrl),
                                 TextFormField(
                                   controller: amountController,
                                   decoration: const InputDecoration(
@@ -149,34 +166,34 @@ class UntappdBeerDetailPage extends StatelessWidget {
                                 TextFormField(
                                   controller: priceController,
                                   decoration:
-                                      const InputDecoration(hintText: "Prijs"),
+                                  const InputDecoration(hintText: "Prijs"),
                                 ),
                                 RaisedButton(
                                     onPressed: () {
                                       Firestore.instance.runTransaction(
-                                          (Transaction transaction) async {
-                                        CollectionReference reference =
+                                              (Transaction transaction) async {
+                                            CollectionReference reference =
                                             Firestore.instance
                                                 .collection("bokaalStock");
-                                        await reference.add({
-                                          "name": _beer.name,
-                                          "abv": _beer.abv,
-                                          "brewery": "brewery name",
-                                          "desc": _beer.description,
-                                          "id": _beer.id,
-                                          "rating": 3.14,
-                                          "style": _beer.style.name,
-                                          "label": {
-                                            "iconUrl": _beer.label.iconUrl,
-                                            "mediumUrl": _beer.label.iconUrl,
-                                            "largeUrl": _beer.label.iconUrl
-                                          },
-                                          "price": int.parse(priceController.text),
-                                          "amount": int.parse(amountController.text),
-                                        });
-                                      });
-                                    Navigator.pop(context);
-                                      },
+                                            await reference.add({
+                                              "name": _beer.name,
+                                              "abv": _beer.abv,
+                                              "brewery": snapshot.data.brewery,
+                                              "desc": _beer.description,
+                                              "id": _beer.id,
+                                              "rating": snapshot.data.rating,
+                                              "style": _beer.style.name,
+                                              "label": {
+                                                "iconUrl": _beer.label.iconUrl,
+                                                "mediumUrl": _beer.label.iconUrl,
+                                                "largeUrl": snapshot.data.label.largeUrl,
+                                              },
+                                              "price": int.parse(priceController.text),
+                                              "amount": int.parse(amountController.text),
+                                            });
+                                          });
+                                      Navigator.pop(context);
+                                    },
                                     child: const Text('Toevoegen')),
                               ],
                             ),
@@ -194,12 +211,6 @@ class UntappdBeerDetailPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                );
-              } else {
-                return Row(
-                  children: <Widget>[
-                    Column(),
-                  ],
                 );
               }
             }),
@@ -393,6 +404,43 @@ class UntappdService implements BeerSearchService {
         "3F67FBB565C90403B951D4F0CD13D1A6FD7ED3E9");
   }
 
+  Future<Beer> findBeerById(String id) async {
+    HttpClient client = new HttpClient();
+    return _callApiBeerById(client, id, 1);
+  }
+
+  Future<Beer> _callApiBeerById(HttpClient httpClient, String id, int retryCount) async {
+   /* final serviceUri = _buildUntappdServiceURI(
+        path: "beer/info/"+id,
+        retryCount: retryCount);
+    HttpClientRequest request = await httpClient.getUrl(serviceUri.item1);
+    HttpClientResponse response = await request.close();
+    if (response.statusCode < 200 || response.statusCode > 299) {
+      if (retryCount < _MAX_TRY_BEFORE_FAIL) {
+        _keysExcludedIds.add(serviceUri.item2);
+        return _callApiBeerById(httpClient, id, retryCount + 1);
+      }
+      throw Exception(
+          "Bad response: ${response.statusCode} (${response.reasonPhrase})");
+    }
+    String responseBody = await response.transform(utf8.decoder).join();
+   // Map data = json.decode(responseBody);*/
+   final response = await http.get("https://api.untappd.com/v4/beer/info/" +id + "?client_id=3F67FBB565C90403B951D4F0CD13D1A6FD7ED3E9&client_secret=F9F5BE857919FE3A91196BDC3FA5E84A9B5A9C26");
+   if (response.statusCode == 200){
+     print(json.decode(response.body));
+
+     return Beer.fromJson(json.decode(response.body));
+   }
+   else {
+     // If that response was not OK, throw an error.
+     print (response.statusCode);
+     throw Exception('Failed to load post');
+   }
+   /* final Map<String, dynamic> responseJson = data["response"];
+    print(responseJson['beer']);
+    return(responseJson['beer'] as Beer);*/
+  }
+
   @override
   Future<List<Item>> findBeersMatching(String pattern) async {
     HttpClient client = new HttpClient();
@@ -414,12 +462,9 @@ class UntappdService implements BeerSearchService {
     HttpClientResponse response = await request.close();
     if (response.statusCode < 200 || response.statusCode > 299) {
       if (retryCount < _MAX_TRY_BEFORE_FAIL) {
-        //  BeerMeUpApp.sentry.capture(event: Event(message: "Invalid provider id: ${serviceUri.item2}"));
         _keysExcludedIds.add(serviceUri.item2);
-
         return _callApiBeerItems(httpClient, pattern, retryCount + 1);
       }
-
       throw Exception(
           "Bad response: ${response.statusCode} (${response.reasonPhrase})");
     }
