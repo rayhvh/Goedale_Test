@@ -45,10 +45,10 @@ class Beer {
 
 
   factory Beer.fromJson(Map<String, dynamic> json){
-    var photoList = new List<BeerPhoto>();
-    for (var i = 0; i < json["response"]["beer"]["media"]["items"].length; i++){
-      photoList.add(BeerPhoto(photo_md: json["response"]["beer"]["media"]["items"][i]['photo']['photo_img_md']));
-    }
+
+    List<dynamic> mapList = json["response"]["beer"]["media"]["items"];
+    var photoList = mapList.map((beerPhotoJson) => BeerPhoto.fromJson(beerPhotoJson)).toList();
+
     return Beer(
       id: json['response']['beer']['bid'].toString(),
       name: json['response']['beer']['beer_name'],
@@ -91,6 +91,11 @@ class Beer {
 class BeerPhoto{
   final String photo_md;
   BeerPhoto({this.photo_md});
+  factory BeerPhoto.fromJson(Map<String, dynamic> json){
+    return BeerPhoto(
+      photo_md: json['photo']['photo_img_md']
+    );
+  }
 }
 
 class BeerStyle {

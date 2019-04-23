@@ -199,22 +199,30 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
                                                 "mediumUrl": _beer.label.iconUrl,
                                                 "largeUrl": snapshot.data.label.largeUrl,
                                               },
-                                              "price": int.parse(priceController.text),
+                                              "price": int.parse(priceController.text) ,
                                               "amount": int.parse(amountController.text),
                                             });
                                             
                                           });
+
                                       Firestore.instance.runTransaction(
-                                          (Transaction transaction) async { // improve using batch,
+                                              (Transaction transaction) async { // improve using batch,
                                             CollectionReference reference =
-                                                Firestore.instance.collection("bokaalStock").document(_beer.id).collection("beerPhotos");
-                                            for(var i = 0; i<snapshot.data.beerPhotos.length; i++  ){
+                                            Firestore.instance.collection("bokaalStock").document(_beer.id).collection("beerPhotos");
+                                           /* reference.getDocuments().then((snapshot) {
+                                              for (DocumentSnapshot ds in snapshot.documents){
+                                                ds.reference.delete();
+                                              };
+                                            });*/
+                                            print(snapshot.data.beerPhotos.length);
+                                            for(var i = 0; i < snapshot.data.beerPhotos.length; i++){
                                               await reference.add({
                                                 "photo_md": snapshot.data.beerPhotos[i].photo_md,
                                               });
                                             };
                                           }
                                       );
+
                                       Navigator.pop(context);
                                     },
                                     child: const Text('Toevoegen')),
