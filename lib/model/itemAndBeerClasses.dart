@@ -21,6 +21,7 @@ class Beer {
   final String id;
   final String name;
   final String description;
+  final String tasteDescription;
   final BeerLabel label;
   final double abv;
   final BeerStyle style;
@@ -32,6 +33,7 @@ class Beer {
     @required this.id,
     @required this.name,
     this.description,
+    this.tasteDescription,
     this.label,
     this.abv,
     this.style,
@@ -40,7 +42,13 @@ class Beer {
     this.beerPhotos,
   });
 
+
+
   factory Beer.fromJson(Map<String, dynamic> json){
+    var photoList = new List<BeerPhoto>();
+    for (var i = 0; i < json["response"]["beer"]["media"]["items"].length; i++){
+      photoList.add(BeerPhoto(photo_md: json["response"]["beer"]["media"]["items"][i]['photo']['photo_img_md']));
+    }
     return Beer(
       id: json['response']['beer']['bid'].toString(),
       name: json['response']['beer']['beer_name'],
@@ -49,9 +57,9 @@ class Beer {
         largeUrl: json['response']['beer']['beer_label_hd']
       ) ,
       abv: double.parse(json['response']['beer']['beer_abv'].toString()),
-
       style: BeerStyle(id: json['response']['beer']['beer_id'], name: json['response']['beer']['beer_style']),
       rating: json['response']['beer']['rating_score'],
+      beerPhotos: photoList,
       brewery: json['response']['beer']['brewery']['brewery_name'],
     );
   }

@@ -115,6 +115,7 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
   _UntappdBeerDetailPageState(this._beer);
   TextEditingController amountController = new TextEditingController();
   TextEditingController priceController = new TextEditingController();
+  TextEditingController tasteDescriptionController = new TextEditingController();
   @override
   void initState(){
     super.initState();
@@ -131,7 +132,7 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
               future: _untappdBeer,
                 builder: (BuildContext context, AsyncSnapshot snapshot) {
               if (snapshot.data == null) {
-                return Container(child: CircularProgressIndicator());
+                return Container(child: Center(child: CircularProgressIndicator()));
               } else {
                 print(snapshot.data.rating);
                 return Padding(
@@ -145,6 +146,7 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
                               padding: const EdgeInsets.all(8.0),
                               child: Column(
                                 children: <Widget>[
+                                  Image.network(snapshot.data.label.largeUrl, height: 200,),
                                   Text(_beer.name, style: Theme.of(context).textTheme.title),
                                   Text(snapshot.data.brewery), // via future untappd because we can only have 100 calls a hour. it only gets calls and info of beer at details
                                   Text(_beer.style.name),
@@ -157,29 +159,38 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
                           Expanded(
                             child: Column(
                               children: <Widget>[
-                                Image.network(snapshot.data.label.largeUrl),
                                 TextFormField(
+                                  keyboardType: TextInputType.number,
                                   controller: amountController,
                                   decoration: const InputDecoration(
                                       hintText: "Hoeveelheid"),
                                 ),
                                 TextFormField(
+                                  keyboardType: TextInputType.number,
                                   controller: priceController,
                                   decoration:
                                   const InputDecoration(hintText: "Prijs"),
+                                ),
+                                TextFormField(
+                                  keyboardType: TextInputType.multiline,
+                                  maxLines: null,
+                                  controller: tasteDescriptionController,
+                                  decoration:
+                                  const InputDecoration(hintText: "Smaak omschrijving"),
                                 ),
                                 RaisedButton(
                                     onPressed: () {
                                       Firestore.instance.runTransaction(
                                               (Transaction transaction) async {
-                                            CollectionReference reference =
+                                            DocumentReference reference =
                                             Firestore.instance
-                                                .collection("bokaalStock");
-                                            await reference.add({
+                                                .collection("bokaalStock").document(_beer.id);
+                                            await reference.setData({
                                               "name": _beer.name,
                                               "abv": _beer.abv,
                                               "brewery": snapshot.data.brewery,
                                               "desc": _beer.description,
+                                              "tasteDesc": tasteDescriptionController.text,
                                               "id": _beer.id,
                                               "rating": snapshot.data.rating,
                                               "style": _beer.style.name,
@@ -191,7 +202,19 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
                                               "price": int.parse(priceController.text),
                                               "amount": int.parse(amountController.text),
                                             });
+                                            
                                           });
+                                      Firestore.instance.runTransaction(
+                                          (Transaction transaction) async { // improve using batch,
+                                            CollectionReference reference =
+                                                Firestore.instance.collection("bokaalStock").document(_beer.id).collection("beerPhotos");
+                                            for(var i = 0; i<snapshot.data.beerPhotos.length; i++  ){
+                                              await reference.add({
+                                                "photo_md": snapshot.data.beerPhotos[i].photo_md,
+                                              });
+                                            };
+                                          }
+                                      );
                                       Navigator.pop(context);
                                     },
                                     child: const Text('Toevoegen')),
@@ -203,9 +226,19 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
                       Expanded(
                         child: Column(
                           children: <Widget>[
+                            Text("Beschrijving",style: Theme.of(context).textTheme.title),
                             Text(_beer.description),
-                            Text("Foto's"),
-                            Text("Smaak labels"),
+                            Text("Foto's",style: Theme.of(context).textTheme.title),
+
+                            Container( height: 200,
+                              child: ListView.builder(scrollDirection: Axis.horizontal, itemCount: snapshot.data.beerPhotos.length, itemBuilder: (BuildContext context, int index){
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Image.network(snapshot.data.beerPhotos[index].photo_md, height: 200,),
+                                );
+                              },),
+                            ),
+
                           ],
                         ),
                       ),
