@@ -42,20 +42,12 @@ class MyHomePage extends StatelessWidget {
           ],
         )),
         appBar: AppBar(
-          title: Text('Goedale aanbod'),
+          title: Text('Goedale beheer'),
           centerTitle: true,
           actions: <Widget>[
             IconButton(
               icon: Icon(Icons.add),
-              onPressed: () {
-                Firestore.instance
-                    .runTransaction((Transaction transaction) async {
-                  CollectionReference reference =
-                      Firestore.instance.collection('beers');
-                  await reference
-                      .add({"title": "", "editing": false, "amount": 0});
-                });
-              },
+
             )
           ],
         ),
@@ -134,7 +126,7 @@ class _UntappdBeerDetailPageState extends State<UntappdBeerDetailPage>{
               if (snapshot.data == null) {
                 return Container(child: Center(child: CircularProgressIndicator()));
               } else {
-                print(snapshot.data.rating);
+
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
